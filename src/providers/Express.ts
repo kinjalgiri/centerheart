@@ -5,11 +5,13 @@
  */
 
 import express from "express";
+import ioserver, { Socket } from "socket.io";
 
 import Locals from "./Locals";
 import Routes from "./Routes";
 import Bootstrap from "../middlewares/Kernel";
 import ExceptionHandler from "../exception/Handler";
+import Log from "../middlewares/Log";
 
 class Express {
   /**
@@ -60,7 +62,7 @@ class Express {
     this.express = ExceptionHandler.notFoundHandler(this.express);
 
     // Start the server on the specified port
-    this.express.listen(port, (_error: any) => {
+    const httpServer = this.express.listen(port, (_error: any) => {
       if (_error) {
         return console.log("Error: ", _error);
       }
@@ -69,6 +71,13 @@ class Express {
         "\x1b[33m%s\x1b[0m",
         `Server :: Running @ 'http://localhost:${port}'`
       );
+    });
+
+    const io = ioserver(httpServer);
+
+    io.on("connection", (socket: Socket) => {
+      Log.info("IOObj");
+      socket.on("disconnect", () => console.log("Client disconnected"));
     });
   }
 }
