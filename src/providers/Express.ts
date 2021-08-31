@@ -5,10 +5,12 @@
  */
 
 import express from "express";
-import ioserver, { Socket } from "socket.io";
+import * as http from "http";
+import ioserver, { Socket, Server } from "socket.io";
 
 import Locals from "./Locals";
 import Routes from "./Routes";
+import SocketIO from "./SocketIO";
 import Bootstrap from "../middlewares/Kernel";
 import ExceptionHandler from "../exception/Handler";
 import Log from "../middlewares/Log";
@@ -53,32 +55,29 @@ class Express {
    * Starts the express server
    */
   public init(): any {
-    const port: number = Locals.config().port;
+    try {
+      const port: number = Locals.config().port;
 
-    // Registering Exception / Error Handlers
-    this.express.use(ExceptionHandler.logErrors);
-    this.express.use(ExceptionHandler.clientErrorHandler);
-    this.express.use(ExceptionHandler.errorHandler);
-    this.express = ExceptionHandler.notFoundHandler(this.express);
+      // Registering Exception / Error Handlers
+      this.express.use(ExceptionHandler.logErrors);
+      this.express.use(ExceptionHandler.clientErrorHandler);
+      this.express.use(ExceptionHandler.errorHandler);
+      this.express = ExceptionHandler.notFoundHandler(this.express);
 
-    // Start the server on the specified port
-    const httpServer = this.express.listen(port, (_error: any) => {
-      if (_error) {
-        return console.log("Error: ", _error);
-      }
+      // Start the server on the specified port
+      const httpServer = this.express.listen(port, (_error: void) => {
+        return console.log(
+          "\x1b[33m%s\x1b[0m",
+          `Server :: Running @ 'http://localhost:${port}'`
+        );
+      });
 
-      return console.log(
-        "\x1b[33m%s\x1b[0m",
-        `Server :: Running @ 'http://localhost:${port}'`
-      );
-    });
+      Log.info("Booting SocketIO");
 
-    const io = ioserver(httpServer);
-
-    io.on("connection", (socket: Socket) => {
-      Log.info("IOObj");
-      socket.on("disconnect", () => console.log("Client disconnected"));
-    });
+      SocketIO.init(httpServer);
+    } catch (_err) {
+      Log.error(_err.stack);
+    }
   }
 }
 
